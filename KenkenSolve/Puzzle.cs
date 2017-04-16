@@ -30,7 +30,7 @@ namespace KenkenSolve
                 var pieces = lines[i].Split(';');
 
                 span.Character = pieces[0][0];
-                span.N = int.Parse(pieces[1]);
+                span.Goal = int.Parse(pieces[1]);
                 span.Behaviour = getBehaviour(pieces[2][0]);
 
                 Groups.Add(span);
@@ -51,21 +51,25 @@ namespace KenkenSolve
                     cell.Group = Groups.FirstOrDefault(g => g.Character == c);
                     cell.Group.Cells.Add(cell);
 
-                    All.Cells.Add(cell);
+                    All.Add(cell);
                 }
             }
 
             for (int i = 0; i < Size; i++)
             {
-                Span column = new Span { Cells = All.Cells.Where(c => c.X == i).ToList() };
-                Span row = new Span { Cells = All.Cells.Where(c => c.Y == i).ToList() };
+                Span column = new Span { Cells = All.Where(c => c.X == i).ToList(), Behaviour = Behavior.Unique, Goal = Size };
+                Span row = new Span { Cells = All.Where(c => c.Y == i).ToList(), Behaviour = Behavior.Unique, Goal = Size };
 
                 Columns.Add(column);
                 Rows.Add(row);
+
+                //build a bidirectional relationship between cells and columns/rows
+                column.Cells.ForEach(c => c.Column = column);
+                row.Cells.ForEach(c => c.Row = row);
             }
         }
 
-        public Span All = new Span();
+        public List<Cell> All = new List<Cell>();
 
         public List<Span> Groups = new List<Span>();
 
@@ -75,13 +79,13 @@ namespace KenkenSolve
         public int Size;
 
         //Tries to print the puzzle in a way that the original grid is visible, not perfect but works
-        public void Print()
+        public void Print(Func<Cell, string> value)
         {
             foreach (var puzzleRow in Rows)
             {
                 foreach (var cell in puzzleRow.Cells)
                 {
-                    Console.Write(cell.Group.N.ToString().PadLeft(3, '0'));
+                    Console.Write(value(cell).PadLeft(4, ' '));
 
                     int colI = puzzleRow.Cells.IndexOf(cell);
                     if (colI + 1 < puzzleRow.Cells.Count)//Check if we're at the end of the row
@@ -102,12 +106,12 @@ namespace KenkenSolve
                     foreach (var cell in puzzleRow.Cells)
                     {
                         int colI = puzzleRow.Cells.IndexOf(cell);
-                        
+
                         //If we're next to a neighbour of the same group, connect them on the same column
                         if (cell.Group == Rows[rowI + 1].Cells[colI].Group)
-                            Console.Write("    ");
+                            Console.Write("     ");
                         else
-                            Console.Write("----");
+                            Console.Write("-----");
                     }
                 }
                 Console.WriteLine();
@@ -140,7 +144,7 @@ namespace KenkenSolve
         public List<Cell> Cells = new List<Cell>();
         public Behavior Behaviour;
 
-        public int N;
+        public int Goal;
         public char Character;
     }
 
@@ -152,6 +156,12 @@ namespace KenkenSolve
 
         public int X;
         public int Y;
+
+        public bool Busy = false;
+
+        public int Value;
+
+        public List<int> PossibleValues = new List<int>();
     }
 
     enum Behavior
