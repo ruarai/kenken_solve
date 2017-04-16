@@ -49,11 +49,11 @@ namespace KenkenSolve
                     updateCellPossibles(puzzle, neighbour);
                 }
 
-                Console.WriteLine("At cell {0},{1}", cell.X, cell.Y);
+                //Console.WriteLine("At cell {0},{1}", cell.X, cell.Y);
 
-                puzzle.Print(c => string.Join("", c.PossibleValues));
-                puzzle.Print(c => c.Value.ToString());
-                Console.ReadKey();
+                //puzzle.Print(c => string.Join("", c.PossibleValues));
+                //puzzle.Print(c => c.Value.ToString());
+                //Console.ReadKey();
 
                 var validNeighbours = neighbours.Where(p => p.PossibleValues.Count > 0);
 
