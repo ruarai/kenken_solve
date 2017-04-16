@@ -14,28 +14,23 @@ namespace KenkenSolve
             initPuzzle(puzzle);
 
             puzzle.All.ForEach(c => updateCellPossibles(puzzle, c));
-            puzzle.Print(c => string.Join("", c.PossibleValues));
 
-            foreach (var cell in puzzle.All)
-            {
-                solveCell(puzzle, cell);
+            solveCell(puzzle, puzzle.All.Where(p => p.PossibleValues.Count > 0).MinBy(p=>p.PossibleValues.Count));
+            
 
-                if (isPuzzleValid(puzzle))
-                    break;
-
-                Console.WriteLine("continuing");
-            }
+            Console.WriteLine("continuing");
         }
-
-        static void solveCell(Puzzle puzzle, Cell cell)
+        
+        static bool solveCell(Puzzle puzzle, Cell cell)
         {
             if (cell.Busy)
-                return;
+                return false;
 
             cell.Busy = true;
 
 
             int initialValue = cell.Value;
+            List<int> initialPossibleValues = cell.PossibleValues.ToList();
 
             var neighbours = getCellNeighbours(cell);
 
@@ -43,36 +38,33 @@ namespace KenkenSolve
             {
                 cell.Value = possibleValue;
 
+                if (isPuzzleValid(puzzle))
+                {
+                    return true;
+                }
 
                 foreach (var neighbour in neighbours)
                 {
                     updateCellPossibles(puzzle, neighbour);
                 }
-
-                //Console.WriteLine("At cell {0},{1}", cell.X, cell.Y);
-
-                //puzzle.Print(c => string.Join("", c.PossibleValues));
-                //puzzle.Print(c => c.Value.ToString());
+                puzzle.Print(c => string.Join("", c.PossibleValues));
+                puzzle.Print(c => c.Value.ToString());
                 //Console.ReadKey();
 
-                var validNeighbours = neighbours.Where(p => p.PossibleValues.Count > 0);
+                var validNeighbours = neighbours.Where(p => p.PossibleValues.Count > 0 && !p.Busy);
 
                 if (!validNeighbours.Any())
                     break;
 
-                solveCell(puzzle, validNeighbours.MinBy(c => c.PossibleValues.Count));
+                if (solveCell(puzzle, validNeighbours.MinBy(c => c.PossibleValues.Count)))
+                    return true;
 
             }
-
-
-            if (isPuzzleValid(puzzle))
-            {
-                return;
-            }
-
 
             cell.Value = initialValue;
+            cell.PossibleValues = initialPossibleValues;
             cell.Busy = false;
+            return false;
         }
 
         static void initPuzzle(Puzzle puzzle)
@@ -178,12 +170,10 @@ namespace KenkenSolve
 
         public static bool isPuzzleValid(Puzzle p)
         {
-            return p.All.All(c => isCellValid(c));
-        }
-
-        public static bool isCellValid(Cell c)
-        {
-            return isSpanValid(c.Row) && isSpanValid(c.Column) && isSpanValid(c.Group);
+            bool valid = p.Columns.All(isSpanValid);
+            valid = valid && p.Rows.All(isSpanValid);
+            valid = valid && p.Groups.All(isSpanValid);
+            return valid;
         }
 
         public static bool isSpanValid(Span s)
@@ -193,7 +183,8 @@ namespace KenkenSolve
 
             if (s.Behaviour == Behavior.Unique)
             {
-                return !s.Cells.Select(c => c.Value).Except(Enumerable.Range(1, s.Goal)).Any();
+                var difference = s.Cells.Select(c => c.Value).Except(Enumerable.Range(1, s.Goal));
+                return !difference.Any();
             }
 
 
