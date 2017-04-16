@@ -1,0 +1,12 @@
+4
+aabb
+cabd
+ceff
+eegg
+a;16;x
+b;7;+
+c;2;-
+d;4;c
+e;12;x
+f;2;/
+g;2;/
