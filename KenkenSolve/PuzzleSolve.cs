@@ -15,52 +15,53 @@ namespace KenkenSolve
 
             puzzle.All.ForEach(c => updateCellPossibles(puzzle, c));
 
-            solveCell(puzzle, puzzle.All.Where(p => p.PossibleValues.Count > 0).MinBy(p=>p.PossibleValues.Count));
-            
-
-            Console.WriteLine("continuing");
+            solveCell(puzzle, puzzle.All.Where(p => p.PossibleValues.Count > 0).MinBy(p => p.PossibleValues.Count));
         }
         
+
         static bool solveCell(Puzzle puzzle, Cell cell)
         {
-            if (cell.Busy)
-                return false;
+            cell.Busy = true;//Set ourselves to 'busy' so we don't loop around in our search tree
 
-            cell.Busy = true;
+            int initialValue = cell.Value;//Store our initial state so we can revert to it later if we need to
+            List<int> initialPossibleValues = cell.PossibleValues;
 
-
-            int initialValue = cell.Value;
-            List<int> initialPossibleValues = cell.PossibleValues.ToList();
-
-            var neighbours = getCellNeighbours(cell);
+            var neighbours = getCellNeighbours(cell);//Find our 'neighbours'
+            //That is all cells we will have an effect on:
+            //Eg, group, column, row cells
 
             foreach (var possibleValue in cell.PossibleValues)
             {
                 cell.Value = possibleValue;
 
+                if (cell.Group.Cells.All(c => c.Value != 0) && !isSpanValid(cell.Group))
+                    continue;
+
                 if (isPuzzleValid(puzzle))
-                {
-                    return true;
-                }
+                    return true;//Did we just solve the puzzle? If so, return
 
+                //Whenever we change our own value, we limit the possible values of all neighbours
+                //Update these so we know where to go next
                 foreach (var neighbour in neighbours)
-                {
                     updateCellPossibles(puzzle, neighbour);
-                }
-                puzzle.Print(c => string.Join("", c.PossibleValues));
-                puzzle.Print(c => c.Value.ToString());
-                //Console.ReadKey();
 
+                //Look for a neighbour that has both: a search space still to explore (eg: not constant)
+                //And is not currently busy (part of our recursive tree)
                 var validNeighbours = neighbours.Where(p => p.PossibleValues.Count > 0 && !p.Busy);
 
+                //No valid neighbours? We've made a wrong choice earlier
                 if (!validNeighbours.Any())
-                    break;
+                    continue;
 
+
+                //Continue expanding the recursive tree down into the valid neighbour with the least possible choices
                 if (solveCell(puzzle, validNeighbours.MinBy(c => c.PossibleValues.Count)))
-                    return true;
+                    return true;//If a solution is found down the recursive tree, we can finish
+                
 
             }
 
+            //No solution found: time to clean up
             cell.Value = initialValue;
             cell.PossibleValues = initialPossibleValues;
             cell.Busy = false;
@@ -91,11 +92,13 @@ namespace KenkenSolve
         public static void updateCellPossibles(Puzzle puzzle, Cell cell)
         {
             //generate initial limitations of possible cells based on already present values in rows/cols
-            var invalids = generateInvalids(cell.Row).ToList();
+            var invalids = generateInvalids(cell.Row);
             invalids.AddRange(generateInvalids(cell.Column));
 
+            //generate possible valid integers based on group limitations
             var valids = generateValids(puzzle, cell.Group);
 
+            //find the set of valids not exclusing any invalids
             cell.PossibleValues = valids.Except(invalids).ToList();
         }
 
@@ -106,6 +109,7 @@ namespace KenkenSolve
 
             if (s.Behaviour == Behavior.Add)
             {
+                //Find any integers that add from our current sum to some integer less than our goal
                 int currentSum = s.Cells.Sum(c => c.Value);
 
                 foreach (var i in sequence)
@@ -116,6 +120,7 @@ namespace KenkenSolve
                     }
                 }
             }
+            //This and divide may be overkill: Unsure if kenken ever has puzzles with groups larger than 2 for subtract or divide
             if (s.Behaviour == Behavior.Subtract)
             {
                 foreach (var i in sequence)
@@ -131,12 +136,20 @@ namespace KenkenSolve
             }
             if (s.Behaviour == Behavior.Multiply)
             {
-                int currentProduct = 1;
-                s.Cells.ForEach(c => currentProduct *= c.Value != 0 ? c.Value : 1);
-                foreach (var i in sequence)
+                if (s.Cells.Count == 1)
                 {
-                    if (currentProduct * i <= s.Goal)
-                        valids.Add(i);
+                    valids.Add(s.Goal / s.Cells[0].Value);
+                }
+                else
+                {
+                    //Find any integers that will multiply to some integer less than our equal to our goal
+                    int currentProduct = 1;
+                    s.Cells.ForEach(c => currentProduct *= c.Value != 0 ? c.Value : 1);
+                    foreach (var i in sequence)
+                    {
+                        if (currentProduct * i <= s.Goal)
+                            valids.Add(i);
+                    }
                 }
             }
             if (s.Behaviour == Behavior.Divide)
@@ -165,7 +178,7 @@ namespace KenkenSolve
 
                 return present.Where(i => i > 0).ToList();
             }
-            return new List<int>(0);
+            return new List<int>(0);//We shouldn't hit this
         }
 
         public static bool isPuzzleValid(Puzzle p)
@@ -183,7 +196,10 @@ namespace KenkenSolve
 
             if (s.Behaviour == Behavior.Unique)
             {
+                //Find the set difference between the sequence 1, 2 ... n and the row/column we have
                 var difference = s.Cells.Select(c => c.Value).Except(Enumerable.Range(1, s.Goal));
+
+                //If this has any values in it, it's not a valid row/column
                 return !difference.Any();
             }
 
@@ -200,50 +216,22 @@ namespace KenkenSolve
                 if (product == s.Goal)
                     return true;
             }
-
-            //Need to generate permutations for subtractions and divisions
-            var permutations = GetPermutations(s.Cells);
-
             if (s.Behaviour == Behavior.Subtract)
             {
-                foreach (var p in permutations)
-                {
-                    int start = p.First().Value;
-
-
-                    //start - a - b ... - z == start - (a + b + ... z)
-
-                    int skipped = p.Skip(1).Sum(c => c.Value);
-                    if (start - skipped == s.Goal)
-                        return true;
-                }
+                if (s.Cells[0].Value - s.Cells[1].Value == s.Goal)
+                    return true;
+                if (s.Cells[1].Value - s.Cells[0].Value == s.Goal)
+                    return true;
             }
             if (s.Behaviour == Behavior.Divide)
             {
-                foreach (var p in permutations)
-                {
-                    int start = p.First().Value;
-
-                    foreach (var cell in p.Skip(1))
-                    {
-                        start /= cell.Value;
-                    }
-                    if (start == s.Goal)
-                        return true;
-                }
+                if (s.Cells[0].Value / s.Cells[1].Value == s.Goal)
+                    return true;
+                if (s.Cells[1].Value / s.Cells[0].Value == s.Goal)
+                    return true;
             }
             return false;
 
-        }
-
-        static IEnumerable<IEnumerable<T>> GetPermutations<T>(IEnumerable<T> list, int length = -1)
-        {
-            if (length == -1) length = list.Count();
-            if (length == 1) return list.Select(t => new T[] { t });
-
-            return GetPermutations(list, length - 1)
-                .SelectMany(t => list.Where(e => !t.Contains(e)),
-                    (t1, t2) => t1.Concat(new T[] { t2 }));
         }
     }
 }
