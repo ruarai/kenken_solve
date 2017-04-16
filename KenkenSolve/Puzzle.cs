@@ -74,6 +74,7 @@ namespace KenkenSolve
 
         public int Size;
 
+        //Tries to print the puzzle in a way that the original grid is visible, not perfect but works
         public void Print()
         {
             foreach (var puzzleRow in Rows)
@@ -81,10 +82,36 @@ namespace KenkenSolve
                 foreach (var cell in puzzleRow.Cells)
                 {
                     Console.Write(cell.Group.N.ToString().PadLeft(3, '0'));
-                    Console.Write("|");
+
+                    int colI = puzzleRow.Cells.IndexOf(cell);
+                    if (colI + 1 < puzzleRow.Cells.Count)//Check if we're at the end of the row
+                    {
+                        //If we're next to a neighbour of the same group, connect them on the same row
+                        if (cell.Group == puzzleRow.Cells[colI + 1].Group)
+                            Console.Write(" ");
+                        else
+                            Console.Write("|");
+                    }
+
                 }
                 Console.WriteLine();
-                Console.WriteLine("".PadLeft(4 * (Size), '-'));
+
+                int rowI = Rows.IndexOf(puzzleRow);
+                if (rowI + 1 < Rows.Count)
+                {
+                    foreach (var cell in puzzleRow.Cells)
+                    {
+                        int colI = puzzleRow.Cells.IndexOf(cell);
+                        
+                        //If we're next to a neighbour of the same group, connect them on the same column
+                        if (cell.Group == Rows[rowI + 1].Cells[colI].Group)
+                            Console.Write("    ");
+                        else
+                            Console.Write("----");
+                    }
+                }
+                Console.WriteLine();
+
             }
         }
 
