@@ -164,7 +164,10 @@ namespace KenkenSolve
 
         public int Value;
 
-        public List<int> PossibleValues = new List<int>();
+        public IEnumerable<int> PossibleValues = new List<int>();
+
+        public int PossibleValueCount = 0;
+
         public List<Cell> Neighbours = new List<Cell>();
     }
 

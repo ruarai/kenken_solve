@@ -14,7 +14,10 @@ namespace KenkenSolve
         public int Goal;
         public char Character;
         public abstract bool isValid();
-        public abstract List<int> generateValids(Puzzle p, List<int> invalids);
+        public abstract void GenerateValids(Puzzle p);
+
+        public List<int> Valids;
+        public bool ChangedSinceGeneration = true;
 
         public abstract char CharCode { get; }
     }
@@ -26,10 +29,8 @@ namespace KenkenSolve
             return true;//Constants are always valid
         }
 
-        public override List<int> generateValids(Puzzle p, List<int> invalids)//Not necessary for constants
-        {
-            return new List<int>();
-        }
+        public override void GenerateValids(Puzzle p)//Not necessary for constants
+        { }
 
         public override char CharCode { get { return 'c'; } }
     }
@@ -41,9 +42,9 @@ namespace KenkenSolve
             return Cells.Sum(c => c.Value) == Goal;
         }
 
-        public override List<int> generateValids(Puzzle p, List<int> invalids)
+        public override void GenerateValids(Puzzle p)
         {
-            List<int> valids = new List<int>();
+            Valids = new List<int>();
             var sequence = Enumerable.Range(1, p.Size);//Generate a sequence 1, 2, ... n
 
             //Find any integers that add from our current sum to some integer less than our goal
@@ -53,11 +54,9 @@ namespace KenkenSolve
             {
                 if (currentSum + i <= Goal)
                 {
-                    if (!invalids.Contains(i))
-                        valids.Add(i);
+                    Valids.Add(i);
                 }
             }
-            return valids;
         }
         public override char CharCode { get { return '+'; } }
     }
@@ -68,9 +67,9 @@ namespace KenkenSolve
             return Cells[0].Value - Cells[1].Value == Goal || Cells[1].Value - Cells[0].Value == Goal;
         }
 
-        public override List<int> generateValids(Puzzle p, List<int> invalids)
+        public override void GenerateValids(Puzzle p)
         {
-            List<int> valids = new List<int>();
+            Valids = new List<int>();
             var sequence = Enumerable.Range(1, p.Size);//Generate a sequence 1, 2, ... n
 
             foreach (var i in sequence)
@@ -79,12 +78,10 @@ namespace KenkenSolve
                 {
                     if (i - j == Goal || j - i == Goal)
                     {
-                        if (!invalids.Contains(i))
-                            valids.Add(i);
+                        Valids.Add(i);
                     }
                 }
             }
-            return valids;
         }
         public override char CharCode { get { return '-'; } }
     }
@@ -98,14 +95,14 @@ namespace KenkenSolve
             return product == Goal;
         }
 
-        public override List<int> generateValids(Puzzle p, List<int> invalids)
+        public override void GenerateValids(Puzzle p)
         {
-            List<int> valids = new List<int>();
+            Valids = new List<int>();
             var sequence = Enumerable.Range(1, p.Size);//Generate a sequence 1, 2, ... n
 
             if (Cells.Count == 1)
             {
-                valids.Add(Goal / Cells[0].Value);
+                Valids.Add(Goal / Cells[0].Value);
             }
             else
             {
@@ -115,11 +112,9 @@ namespace KenkenSolve
                 foreach (var i in sequence)
                 {
                     if (currentProduct * i <= Goal)
-                        if (!invalids.Contains(i))
-                            valids.Add(i);
+                        Valids.Add(i);
                 }
             }
-            return valids;
         }
         public override char CharCode { get { return 'x'; } }
     }
@@ -133,9 +128,9 @@ namespace KenkenSolve
             return Cells[0].Value / Cells[1].Value == Goal || Cells[1].Value / Cells[0].Value == Goal;
         }
 
-        public override List<int> generateValids(Puzzle p, List<int> invalids)
+        public override void GenerateValids(Puzzle p)
         {
-            List<int> valids = new List<int>();
+            Valids = new List<int>();
             var sequence = Enumerable.Range(1, p.Size);//Generate a sequence 1, 2, ... n
 
 
@@ -145,18 +140,16 @@ namespace KenkenSolve
                 {
                     if (i / j == Goal || j / i == Goal)
                     {
-                        if (!invalids.Contains(i))
-                            valids.Add(i);
+                        Valids.Add(i);
                     }
                 }
             }
-
-            return valids;
         }
         public override char CharCode { get { return '/'; } }
     }
 
-    class UniqueSpan : Span {
+    class UniqueSpan : Span
+    {
         public override bool isValid()
         {
             //Find the set difference between the sequence 1, 2 ... n and the row/column we have
@@ -166,8 +159,8 @@ namespace KenkenSolve
             return !difference.Any();
         }
 
-        public override List<int> generateValids(Puzzle p, List<int> invalids)
-        {throw new NotImplementedException();}
+        public override void GenerateValids(Puzzle p)
+        { }
 
         public override char CharCode { get { return ' '; } }
     }

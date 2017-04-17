@@ -12,7 +12,7 @@ namespace KenkenSolve
     {
         static void Main(string[] args)
         {
-            Puzzle p = new Puzzle("game5.txt");
+            Puzzle p = new Puzzle("game9.txt");
 
 
             p.Print(c => c.Group.Goal.ToString() + c.Group.CharCode);

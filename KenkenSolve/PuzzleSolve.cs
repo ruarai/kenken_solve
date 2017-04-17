@@ -15,7 +15,7 @@ namespace KenkenSolve
 
             puzzle.All.ForEach(c => updateCellPossibles(puzzle, c));
 
-            solveCell(puzzle, puzzle.All.Where(p => p.PossibleValues.Count > 0).MinBy(p => p.PossibleValues.Count));
+            solveCell(puzzle, puzzle.All.Where(p => p.PossibleValues.Any()).MinBy(p => p.PossibleValueCount));
         }
 
 
@@ -25,7 +25,7 @@ namespace KenkenSolve
             cell.Busy = true;//Set ourselves to 'busy' so we don't loop around in our search tree
 
             int initialValue = cell.Value;//Store our initial state so we can revert to it later if we need to
-            List<int> initialPossibleValues = cell.PossibleValues;
+            IEnumerable<int> initialPossibleValues = cell.PossibleValues;
 
             foreach (var possibleValue in cell.PossibleValues)
             {
@@ -43,8 +43,8 @@ namespace KenkenSolve
                 //Update these so we know where to go next
                 foreach (var neighbour in cell.Neighbours)
                     updateCellPossibles(puzzle, neighbour);
-
-                if (i % 4096 == 0)
+                
+                if (i % 50000 == 0)
                     showProgress(puzzle);
 
                 Cell minNeighbour = null;
@@ -52,12 +52,11 @@ namespace KenkenSolve
 
                 foreach (var n in cell.Neighbours)
                 {
-                    int nCount = n.PossibleValues.Count;
-                    if (!n.Busy && nCount > 0)
+                    if (!n.Busy && n.PossibleValueCount > 0)
                     {
-                        if (nCount < minNeighbourCount)
+                        if (n.PossibleValueCount < minNeighbourCount)
                         {
-                            minNeighbourCount = nCount;
+                            minNeighbourCount = n.PossibleValueCount;
                             minNeighbour = n;
                         }
                     }
@@ -90,9 +89,13 @@ namespace KenkenSolve
 
             int num = puzzle.Columns.Count + puzzle.Groups.Count + puzzle.Rows.Count;
 
+            Console.ForegroundColor = ConsoleColor.Cyan;
             Console.Write(new string('G', group));
+            Console.ForegroundColor = ConsoleColor.Red;
             Console.Write(new string('C', col));
+            Console.ForegroundColor = ConsoleColor.Green;
             Console.Write(new string('R', row));
+            Console.ForegroundColor = ConsoleColor.Gray;
             Console.Write(new string('_', num - correct));
             Console.WriteLine(" ({0}/{1})", correct, num);
         }
@@ -111,20 +114,26 @@ namespace KenkenSolve
 
         public static void updateCellPossibles(Puzzle puzzle, Cell cell)
         {
-            //generate initial limitations of possible cells based on already present values in rows/cols
-            var invalids = generateInvalids(cell.Row);
-            invalids.AddRange(generateInvalids(cell.Column));
+            if (cell.Group is ConstantSpan)
+                return;
+
+            var invalids = new List<int>();
+
+            foreach (var c in cell.Row.Cells)
+                if (c.Value > 0)
+                    invalids.Add(c.Value);
+
+            foreach (var c in cell.Column.Cells)
+                if (c.Value > 0)
+                    invalids.Add(c.Value);
+
+            if (cell.Group.ChangedSinceGeneration)
+                cell.Group.GenerateValids(puzzle);
 
             //find the set of valids not including any invalids
-            cell.PossibleValues = cell.Group.generateValids(puzzle, invalids);
-        }
-
-        //Only called for columns/rows
-        public static List<int> generateInvalids(Span s)
-        {
-            var present = s.Cells.Select(c => c.Value); //Values already present
-
-            return present.Where(i => i > 0).ToList();
+            cell.PossibleValues = cell.Group.Valids.Except(invalids);
+            
+            cell.PossibleValueCount = cell.PossibleValues.Count();
         }
 
         public static bool isPuzzleValid(Puzzle p)
