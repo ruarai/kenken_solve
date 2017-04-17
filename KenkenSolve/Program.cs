@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -11,14 +12,20 @@ namespace KenkenSolve
     {
         static void Main(string[] args)
         {
-            Puzzle p = new Puzzle("game4.txt");
+            Puzzle p = new Puzzle("game5.txt");
+
 
             p.Print(c => c.Group.Goal.ToString() + c.Group.CharCode);
+
+            Stopwatch s = new Stopwatch();
+            s.Start();
 
             PuzzleSolve.Solve(p);
+
+            s.Stop();
+            Console.WriteLine(s.ElapsedMilliseconds);
             
             p.Print(c => c.Value.ToString());
-            p.Print(c => c.Group.Goal.ToString() + c.Group.CharCode);
 
 
             Console.WriteLine();

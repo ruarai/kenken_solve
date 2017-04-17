@@ -27,7 +27,9 @@ namespace KenkenSolve
         }
 
         public override List<int> generateValids(Puzzle p, List<int> invalids)//Not necessary for constants
-        { throw new NotImplementedException(); }
+        {
+            return new List<int>();
+        }
 
         public override char CharCode { get { return 'c'; } }
     }

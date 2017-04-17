@@ -42,6 +42,9 @@ namespace KenkenSolve
                     case '/':
                         span = new DivideSpan();
                         break;
+                    case 'c':
+                        span = new ConstantSpan();
+                        break;
                     default:
                         span = new AddSpan();
                         break;
