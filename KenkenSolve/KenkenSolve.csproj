@@ -51,6 +51,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Puzzle.cs" />
     <Compile Include="PuzzleSolve.cs" />
+    <Compile Include="Span.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

@@ -25,13 +25,30 @@ namespace KenkenSolve
 
             for (int i = Size + 1; i < lines.Length; i++)
             {
-                Span span = new Span();
-
+                Span span;
                 var pieces = lines[i].Split(';');
+
+                switch (pieces[2][0])
+                {
+                    case '+':
+                        span = new AddSpan();
+                        break;
+                    case '-':
+                        span = new SubtractSpan();
+                        break;
+                    case 'x':
+                        span = new MultiplySpan();
+                        break;
+                    case '/':
+                        span = new DivideSpan();
+                        break;
+                    default:
+                        span = new AddSpan();
+                        break;
+                }
 
                 span.Character = pieces[0][0];
                 span.Goal = int.Parse(pieces[1]);
-                span.Behaviour = getBehaviour(pieces[2][0]);
 
                 Groups.Add(span);
             }
@@ -56,8 +73,8 @@ namespace KenkenSolve
 
             for (int i = 0; i < Size; i++)
             {
-                Span column = new Span { Cells = All.Where(c => c.X == i).ToList(), Behaviour = Behavior.Unique, Goal = Size };
-                Span row = new Span { Cells = All.Where(c => c.Y == i).ToList(), Behaviour = Behavior.Unique, Goal = Size };
+                Span column = new UniqueSpan { Cells = All.Where(c => c.X == i).ToList(), Goal = Size };
+                Span row = new UniqueSpan { Cells = All.Where(c => c.Y == i).ToList(), Goal = Size };
 
                 Columns.Add(column);
                 Rows.Add(row);
@@ -76,7 +93,7 @@ namespace KenkenSolve
             neighbours.AddRange(cell.Column.Cells);
             neighbours.AddRange(cell.Row.Cells);
 
-            return neighbours.Where(c => c.Group.Behaviour != Behavior.Constant && c != cell).Distinct().ToList();
+            return neighbours.Where(c => !(c.Group is ConstantSpan) && c != cell).Distinct().ToList();
         }
 
         public List<Cell> All = new List<Cell>();
@@ -129,33 +146,6 @@ namespace KenkenSolve
             }
         }
 
-        static Behavior getBehaviour(char c)
-        {
-            switch (c)
-            {
-                case 'x':
-                    return Behavior.Multiply;
-                case '/':
-                    return Behavior.Divide;
-                case '+':
-                    return Behavior.Add;
-                case '-':
-                    return Behavior.Subtract;
-                case 'c':
-                    return Behavior.Constant;
-            }
-            return Behavior.Unique;//Shouldn't happen anyway
-        }
-
-    }
-
-    class Span//Collection of cells, may be a row, column or a group
-    {
-        public List<Cell> Cells = new List<Cell>();
-        public Behavior Behaviour;
-
-        public int Goal;
-        public char Character;
     }
 
     class Cell
@@ -173,16 +163,6 @@ namespace KenkenSolve
 
         public List<int> PossibleValues = new List<int>();
         public List<Cell> Neighbours = new List<Cell>();
-    }
-
-    enum Behavior
-    {
-        Multiply,//Combination of cells multiply to n
-        Divide,//Permutation of cells divide to n
-        Add,//Combination of cells add to n
-        Subtract,//Permutation of cells subtract to n
-        Constant,//All cells are always some n
-        Unique//All cells form a distinct set of a sequence 1, 2, ..., n
     }
 
 

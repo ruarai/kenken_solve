@@ -19,6 +19,7 @@ namespace KenkenSolve
         }
 
 
+        private static int i = 0;
         static bool solveCell(Puzzle puzzle, Cell cell)
         {
             cell.Busy = true;//Set ourselves to 'busy' so we don't loop around in our search tree
@@ -29,9 +30,10 @@ namespace KenkenSolve
             foreach (var possibleValue in cell.PossibleValues)
             {
                 cell.Value = possibleValue;
+                i++;
 
                 //Don't bother continuing if we just filled in a final cell of a group and it resulted in an invalid configuration
-                if (cell.Group.Cells.All(c => c.Value != 0) && !isSpanValid(cell.Group))
+                if (cell.Group.Cells.All(c => c.Value != 0) && !cell.Group.isValid())
                     continue;
 
                 if (isPuzzleValid(puzzle))
@@ -42,6 +44,8 @@ namespace KenkenSolve
                 foreach (var neighbour in cell.Neighbours)
                     updateCellPossibles(puzzle, neighbour);
 
+                if (i % 4096 == 0)
+                    showProgress(puzzle);
 
                 Cell minNeighbour = null;
                 int minNeighbourCount = int.MaxValue;
@@ -75,12 +79,30 @@ namespace KenkenSolve
             return false;
         }
 
+        static void showProgress(Puzzle puzzle)
+        {
+            int col = puzzle.Columns.Sum(c => c.isValid() ? 1 : 0);
+            int row = puzzle.Rows.Sum(r => r.isValid() ? 1 : 0);
+            int group = puzzle.Groups.Sum(g => g.isValid() ? 1 : 0);
+
+            int correct = col + row + group;
+
+
+            int num = puzzle.Columns.Count + puzzle.Groups.Count + puzzle.Rows.Count;
+
+            Console.Write(new string('G', group));
+            Console.Write(new string('C', col));
+            Console.Write(new string('R', row));
+            Console.Write(new string('_', num - correct));
+            Console.WriteLine(" ({0}/{1})", correct, num);
+        }
+
         static void initPuzzle(Puzzle puzzle)
         {
             foreach (var cell in puzzle.All)
             {
                 //Fill in constant value cells with their constant value
-                if (cell.Group.Behaviour == Behavior.Constant)
+                if (cell.Group is ConstantSpan)
                 {
                     cell.Value = cell.Group.Goal;
                 }
@@ -94,143 +116,23 @@ namespace KenkenSolve
             invalids.AddRange(generateInvalids(cell.Column));
 
             //find the set of valids not including any invalids
-            cell.PossibleValues = generateValids(puzzle, cell.Group, invalids);
+            cell.PossibleValues = cell.Group.generateValids(puzzle, invalids);
         }
 
-        public static List<int> generateValids(Puzzle puzzle, Span s, List<int> invalids)
-        {
-            List<int> valids = new List<int>();
-            var sequence = Enumerable.Range(1, puzzle.Size);//Generate a sequence 1, 2, ... n
-
-            if (s.Behaviour == Behavior.Add)
-            {
-                //Find any integers that add from our current sum to some integer less than our goal
-                int currentSum = s.Cells.Sum(c => c.Value);
-
-                foreach (var i in sequence)
-                {
-                    if (currentSum + i <= s.Goal)
-                    {
-                        if (!invalids.Contains(i))
-                            valids.Add(i);
-                    }
-                }
-            }
-            //This and divide may be overkill: Unsure if kenken ever has puzzles with groups larger than 2 for subtract or divide
-            if (s.Behaviour == Behavior.Subtract)
-            {
-                foreach (var i in sequence)
-                {
-                    foreach (var j in sequence)
-                    {
-                        if (i - j == s.Goal || j - i == s.Goal)
-                        {
-                            if (!invalids.Contains(i))
-                                valids.Add(i);
-                        }
-                    }
-                }
-            }
-            if (s.Behaviour == Behavior.Multiply)
-            {
-                if (s.Cells.Count == 1)
-                {
-                    valids.Add(s.Goal / s.Cells[0].Value);
-                }
-                else
-                {
-                    //Find any integers that will multiply to some integer less than our equal to our goal
-                    int currentProduct = 1;
-                    s.Cells.ForEach(c => currentProduct *= c.Value != 0 ? c.Value : 1);
-                    foreach (var i in sequence)
-                    {
-                        if (currentProduct * i <= s.Goal)
-                            if (!invalids.Contains(i))
-                                valids.Add(i);
-                    }
-                }
-            }
-            if (s.Behaviour == Behavior.Divide)
-            {
-                foreach (var i in sequence)
-                {
-                    foreach (var j in sequence)
-                    {
-                        if (i / j == s.Goal || j / i == s.Goal)
-                        {
-                            if (!invalids.Contains(i))
-                                valids.Add(i);
-                        }
-                    }
-                }
-            }
-
-            valids = valids.Where(i => i > 0).Distinct().ToList();
-            return valids;
-        }
-
+        //Only called for columns/rows
         public static List<int> generateInvalids(Span s)
         {
-            if (s.Behaviour == Behavior.Unique)
-            {
-                var present = s.Cells.Select(c => c.Value); //Values already present
+            var present = s.Cells.Select(c => c.Value); //Values already present
 
-                return present.Where(i => i > 0).ToList();
-            }
-            return new List<int>(0);//We shouldn't hit this
+            return present.Where(i => i > 0).ToList();
         }
 
         public static bool isPuzzleValid(Puzzle p)
         {
-            bool valid = p.Columns.All(isSpanValid);
-            valid = valid && p.Rows.All(isSpanValid);
-            valid = valid && p.Groups.All(isSpanValid);
+            bool valid = p.Columns.All(c => c.isValid());
+            valid = valid && p.Rows.All(r => r.isValid());
+            valid = valid && p.Groups.All(g => g.isValid());
             return valid;
-        }
-
-        public static bool isSpanValid(Span s)
-        {
-            if (s.Behaviour == Behavior.Constant)//Constant is always true
-                return true;
-
-            if (s.Behaviour == Behavior.Unique)
-            {
-                //Find the set difference between the sequence 1, 2 ... n and the row/column we have
-                var difference = s.Cells.Select(c => c.Value).Except(Enumerable.Range(1, s.Goal));
-
-                //If this has any values in it, it's not a valid row/column
-                return !difference.Any();
-            }
-
-
-            if (s.Behaviour == Behavior.Add)
-            {
-                return s.Cells.Sum(c => c.Value) == s.Goal;
-            }
-            if (s.Behaviour == Behavior.Multiply)
-            {
-                int product = 1;
-                s.Cells.ForEach(c => product *= c.Value);
-
-                if (product == s.Goal)
-                    return true;
-            }
-            if (s.Behaviour == Behavior.Subtract)
-            {
-                if (s.Cells[0].Value - s.Cells[1].Value == s.Goal)
-                    return true;
-                if (s.Cells[1].Value - s.Cells[0].Value == s.Goal)
-                    return true;
-            }
-            if (s.Behaviour == Behavior.Divide)
-            {
-                if (s.Cells[0].Value / s.Cells[1].Value == s.Goal)
-                    return true;
-                if (s.Cells[1].Value / s.Cells[0].Value == s.Goal)
-                    return true;
-            }
-            return false;
-
         }
     }
 }

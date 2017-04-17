@@ -11,39 +11,19 @@ namespace KenkenSolve
     {
         static void Main(string[] args)
         {
-            Puzzle p = new Puzzle("game5.txt");
+            Puzzle p = new Puzzle("game4.txt");
 
-            p.Print(c => c.Group.Goal.ToString() + getBehaviourChar(c.Group.Behaviour));
+            p.Print(c => c.Group.Goal.ToString() + c.Group.CharCode);
 
             PuzzleSolve.Solve(p);
-
+            
             p.Print(c => c.Value.ToString());
-            p.Print(c => c.Group.Goal.ToString() + getBehaviourChar(c.Group.Behaviour));
+            p.Print(c => c.Group.Goal.ToString() + c.Group.CharCode);
 
 
             Console.WriteLine();
 
             Console.ReadKey();
-        }
-
-
-
-        static char getBehaviourChar(Behavior b)
-        {
-            switch (b)
-            {
-                case Behavior.Multiply:
-                    return 'x';
-                case Behavior.Divide:
-                    return '/';
-                case Behavior.Add:
-                    return '+';
-                case Behavior.Subtract:
-                    return '-';
-                case Behavior.Constant:
-                    return 'c';
-            }
-            return ' ';
         }
     }
 
