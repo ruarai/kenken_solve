@@ -17,7 +17,7 @@ namespace KenkenSolve
 
             solveCell(puzzle, puzzle.All.Where(p => p.PossibleValues.Count > 0).MinBy(p => p.PossibleValues.Count));
         }
-        
+
 
         static bool solveCell(Puzzle puzzle, Cell cell)
         {
@@ -26,14 +26,11 @@ namespace KenkenSolve
             int initialValue = cell.Value;//Store our initial state so we can revert to it later if we need to
             List<int> initialPossibleValues = cell.PossibleValues;
 
-            var neighbours = getCellNeighbours(cell);//Find our 'neighbours'
-            //That is all cells we will have an effect on:
-            //Eg, group, column, row cells
-
             foreach (var possibleValue in cell.PossibleValues)
             {
                 cell.Value = possibleValue;
 
+                //Don't bother continuing if we just filled in a final cell of a group and it resulted in an invalid configuration
                 if (cell.Group.Cells.All(c => c.Value != 0) && !isSpanValid(cell.Group))
                     continue;
 
@@ -42,12 +39,13 @@ namespace KenkenSolve
 
                 //Whenever we change our own value, we limit the possible values of all neighbours
                 //Update these so we know where to go next
-                foreach (var neighbour in neighbours)
+                foreach (var neighbour in cell.Neighbours)
                     updateCellPossibles(puzzle, neighbour);
+
 
                 //Look for a neighbour that has both: a search space still to explore (eg: not constant)
                 //And is not currently busy (part of our recursive tree)
-                var validNeighbours = neighbours.Where(p => p.PossibleValues.Count > 0 && !p.Busy);
+                var validNeighbours = cell.Neighbours.Where(p => p.PossibleValues.Count > 0 && !p.Busy);
 
                 //No valid neighbours? We've made a wrong choice earlier
                 if (!validNeighbours.Any())
@@ -57,8 +55,6 @@ namespace KenkenSolve
                 //Continue expanding the recursive tree down into the valid neighbour with the least possible choices
                 if (solveCell(puzzle, validNeighbours.MinBy(c => c.PossibleValues.Count)))
                     return true;//If a solution is found down the recursive tree, we can finish
-                
-
             }
 
             //No solution found: time to clean up
@@ -80,29 +76,17 @@ namespace KenkenSolve
             }
         }
 
-        static List<Cell> getCellNeighbours(Cell cell)
-        {
-            var neighbours = cell.Group.Cells.ToList();
-            neighbours.AddRange(cell.Column.Cells);
-            neighbours.AddRange(cell.Row.Cells);
-
-            return neighbours.Where(c => c.Group.Behaviour != Behavior.Constant && c != cell).Distinct().ToList();
-        }
-
         public static void updateCellPossibles(Puzzle puzzle, Cell cell)
         {
             //generate initial limitations of possible cells based on already present values in rows/cols
             var invalids = generateInvalids(cell.Row);
             invalids.AddRange(generateInvalids(cell.Column));
 
-            //generate possible valid integers based on group limitations
-            var valids = generateValids(puzzle, cell.Group);
-
-            //find the set of valids not exclusing any invalids
-            cell.PossibleValues = valids.Except(invalids).ToList();
+            //find the set of valids not including any invalids
+            cell.PossibleValues = generateValids(puzzle, cell.Group, invalids);
         }
 
-        public static List<int> generateValids(Puzzle puzzle, Span s)
+        public static List<int> generateValids(Puzzle puzzle, Span s, List<int> invalids)
         {
             List<int> valids = new List<int>();
             var sequence = Enumerable.Range(1, puzzle.Size);//Generate a sequence 1, 2, ... n
@@ -116,7 +100,8 @@ namespace KenkenSolve
                 {
                     if (currentSum + i <= s.Goal)
                     {
-                        valids.Add(i);
+                        if (!invalids.Contains(i))
+                            valids.Add(i);
                     }
                 }
             }
@@ -129,7 +114,8 @@ namespace KenkenSolve
                     {
                         if (i - j == s.Goal || j - i == s.Goal)
                         {
-                            valids.Add(i);
+                            if (!invalids.Contains(i))
+                                valids.Add(i);
                         }
                     }
                 }
@@ -148,7 +134,8 @@ namespace KenkenSolve
                     foreach (var i in sequence)
                     {
                         if (currentProduct * i <= s.Goal)
-                            valids.Add(i);
+                            if (!invalids.Contains(i))
+                                valids.Add(i);
                     }
                 }
             }
@@ -160,7 +147,8 @@ namespace KenkenSolve
                     {
                         if (i / j == s.Goal || j / i == s.Goal)
                         {
-                            valids.Add(i);
+                            if (!invalids.Contains(i))
+                                valids.Add(i);
                         }
                     }
                 }

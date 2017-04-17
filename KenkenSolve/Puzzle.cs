@@ -36,7 +36,6 @@ namespace KenkenSolve
                 Groups.Add(span);
             }
 
-
             for (int y = 0; y < Size; y++)
             {
                 for (int x = 0; x < Size; x++)
@@ -67,6 +66,17 @@ namespace KenkenSolve
                 column.Cells.ForEach(c => c.Column = column);
                 row.Cells.ForEach(c => c.Row = row);
             }
+
+            All.ForEach(c=>c.Neighbours = getCellNeighbours(c));
+        }
+
+        static List<Cell> getCellNeighbours(Cell cell)
+        {
+            var neighbours = cell.Group.Cells.ToList();
+            neighbours.AddRange(cell.Column.Cells);
+            neighbours.AddRange(cell.Row.Cells);
+
+            return neighbours.Where(c => c.Group.Behaviour != Behavior.Constant && c != cell).Distinct().ToList();
         }
 
         public List<Cell> All = new List<Cell>();
@@ -162,6 +172,7 @@ namespace KenkenSolve
         public int Value;
 
         public List<int> PossibleValues = new List<int>();
+        public List<Cell> Neighbours = new List<Cell>();
     }
 
     enum Behavior
