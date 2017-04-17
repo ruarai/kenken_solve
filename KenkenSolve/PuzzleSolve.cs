@@ -43,17 +43,28 @@ namespace KenkenSolve
                     updateCellPossibles(puzzle, neighbour);
 
 
-                //Look for a neighbour that has both: a search space still to explore (eg: not constant)
-                //And is not currently busy (part of our recursive tree)
-                var validNeighbours = cell.Neighbours.Where(p => p.PossibleValues.Count > 0 && !p.Busy);
+                Cell minNeighbour = null;
+                int minNeighbourCount = int.MaxValue;
 
+                foreach (var n in cell.Neighbours)
+                {
+                    int nCount = n.PossibleValues.Count;
+                    if (!n.Busy && nCount > 0)
+                    {
+                        if (nCount < minNeighbourCount)
+                        {
+                            minNeighbourCount = nCount;
+                            minNeighbour = n;
+                        }
+                    }
+                }
                 //No valid neighbours? We've made a wrong choice earlier
-                if (!validNeighbours.Any())
+                if (minNeighbour == null)
                     continue;
 
 
                 //Continue expanding the recursive tree down into the valid neighbour with the least possible choices
-                if (solveCell(puzzle, validNeighbours.MinBy(c => c.PossibleValues.Count)))
+                if (solveCell(puzzle, minNeighbour))
                     return true;//If a solution is found down the recursive tree, we can finish
             }
 
