@@ -164,7 +164,7 @@ namespace KenkenSolve
 
         public int Value;
 
-        public IEnumerable<int> PossibleValues = new List<int>();
+        public HashSet<int> PossibleValues = new HashSet<int>();
 
         public int PossibleValueCount = 0;
 

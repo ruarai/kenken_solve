@@ -25,7 +25,7 @@ namespace KenkenSolve
             cell.Busy = true;//Set ourselves to 'busy' so we don't loop around in our search tree
 
             int initialValue = cell.Value;//Store our initial state so we can revert to it later if we need to
-            IEnumerable<int> initialPossibleValues = cell.PossibleValues;
+            HashSet<int> initialPossibleValues = cell.PossibleValues;
 
             foreach (var possibleValue in cell.PossibleValues)
             {
@@ -131,7 +131,8 @@ namespace KenkenSolve
                 cell.Group.GenerateValids(puzzle);
 
             //find the set of valids not including any invalids
-            cell.PossibleValues = cell.Group.Valids.Except(invalids);
+            cell.PossibleValues = cell.Group.Valids;
+            cell.PossibleValues.ExceptWith(invalids);
             
             cell.PossibleValueCount = cell.PossibleValues.Count();
         }

@@ -16,7 +16,7 @@ namespace KenkenSolve
         public abstract bool isValid();
         public abstract void GenerateValids(Puzzle p);
 
-        public List<int> Valids;
+        public HashSet<int> Valids;
         public bool ChangedSinceGeneration = true;
 
         public abstract char CharCode { get; }
@@ -44,7 +44,7 @@ namespace KenkenSolve
 
         public override void GenerateValids(Puzzle p)
         {
-            Valids = new List<int>();
+            Valids = new HashSet<int>();
             var sequence = Enumerable.Range(1, p.Size);//Generate a sequence 1, 2, ... n
 
             //Find any integers that add from our current sum to some integer less than our goal
@@ -69,7 +69,7 @@ namespace KenkenSolve
 
         public override void GenerateValids(Puzzle p)
         {
-            Valids = new List<int>();
+            Valids = new HashSet<int>();
             var sequence = Enumerable.Range(1, p.Size);//Generate a sequence 1, 2, ... n
 
             foreach (var i in sequence)
@@ -97,7 +97,7 @@ namespace KenkenSolve
 
         public override void GenerateValids(Puzzle p)
         {
-            Valids = new List<int>();
+            Valids = new HashSet<int>();
             var sequence = Enumerable.Range(1, p.Size);//Generate a sequence 1, 2, ... n
 
             if (Cells.Count == 1)
@@ -130,7 +130,7 @@ namespace KenkenSolve
 
         public override void GenerateValids(Puzzle p)
         {
-            Valids = new List<int>();
+            Valids = new HashSet<int>();
             var sequence = Enumerable.Range(1, p.Size);//Generate a sequence 1, 2, ... n
 
 
